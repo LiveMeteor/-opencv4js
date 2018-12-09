@@ -1,0 +1,13 @@
+{
+  "name": "nodejs-console",
+  "version": "0.0.0",
+  "main": "./bin/main.js",
+  "dependencies": {
+    "base64-stream": "^1.0.0",
+    "get-pixels": "^3.3.2",
+    "jimp": "^0.6.0",
+    "path": "^0.12.7",
+    "save-pixels": "^2.3.4",
+    "zeros": "^1.0.0"
+  }
+}
