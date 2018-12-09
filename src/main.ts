@@ -1,6 +1,7 @@
 import { FSTool } from "./FSTool";
 import * as path from 'path';
 import * as fs from 'fs';
+import * as Jimp from 'jimp';
 
 // import http = require('http');
 // var port = process.env.port || 1337;
@@ -13,6 +14,9 @@ import * as fs from 'fs';
 let resource = "./resource";
 
 function run() {
+
+    prcessImage();
+    return;
     let files = FSTool.GetFilesFromDirectorySync(resource);
     var getPixels = require("get-pixels");
 
@@ -49,21 +53,66 @@ function run() {
 
     // open a file called "lenna.png"
 
-    var Jimp = require('jimp');
-    Jimp.read(path.join(resource, files[0]), (err, lenna) => {
-        if (err)
-            throw err;
-        lenna.resize(256, 256) // resize
+    // var Jimp = require('jimp');
+    // Jimp.read(path.join(resource, files[0]), (err, lenna) => {
+    //     if (err)
+    //         return err.toString();
 
-        lenna.quality(60) // set JPEG quality
-        lenna.greyscale() // set greyscale
-        let pixel = lenna.getPixelColour(100, 100);
-        console.log(pixel);
+    //     lenna.resize(256, 256) // resize
 
-        lenna.write('lena-small-bw.jpg'); // save
+    //     lenna.quality(60) // set JPEG quality
+    //     lenna.greyscale() // set greyscale
+    //     let pixel = lenna.getPixelColour(100, 100);
+    //     console.log(pixel);
 
-    });
+    //     lenna.write('lena-small-bw.jpg'); // save
 
+    // });
+
+
+}
+
+async function prcessImage(): Promise<void>
+{
+    let files = FSTool.GetFilesFromDirectorySync(resource);
+    for (let k in files)
+    {
+        let dataImage = await Jimp.read(path.join(resource, files[k]));
+        dataImage.resize(512, Jimp.AUTO);
+        dataImage = await changePixel(dataImage);
+
+        dataImage.write("output.jpg");
+    }
+}
+
+async function changePixel(dataImage: Jimp): Promise<Jimp>
+{
+    let size = {width: dataImage.getWidth(), height: dataImage.getHeight()};
+    for (let x = 0; x < size.width; x++)
+    {
+        for (let y = 0; y < size.height; y++)
+        {
+            let pixel = dataImage.getPixelColor(x, y);
+            let pixelRGB = Jimp.intToRGBA(pixel);
+            pixelRGB.r += 10;
+            pixelRGB.g += 10;
+            pixelRGB.b += 10;
+            let newPixel = Jimp.rgbaToInt(
+                Math.min(pixelRGB.r, 255), 
+                Math.min(pixelRGB.g, 255), 
+                Math.min(pixelRGB.b, 255), pixelRGB.a, () => {});
+            try
+            {
+                dataImage.setPixelColor(newPixel, x, y);
+            }
+            catch (err)
+            {
+                console.log(newPixel, x, y);
+            }
+            // dataImage.setPixelColor(newPixel, x, y);
+        }
+    }
+    return dataImage;
 
 }
 
