@@ -1,7 +1,9 @@
 import { FSTool } from "./FSTool";
+import { vision } from "./vision/VisionUtils";
 import * as path from 'path';
-import * as fs from 'fs';
 import * as Jimp from 'jimp';
+import * as cv from 'opencv4nodejs';
+import * as fs from "fs";
 
 // import http = require('http');
 // var port = process.env.port || 1337;
@@ -12,65 +14,130 @@ import * as Jimp from 'jimp';
 // console.log(`Server Started! Please visit http://127.0.0.1:${port}`);
 
 let resource = "./resource";
+const classifier = new cv.CascadeClassifier(cv.HAAR_FRONTALFACE_ALT2);
 
 function run() {
 
-    prcessImage();
-    return;
-    let files = FSTool.GetFilesFromDirectorySync(resource);
-    var getPixels = require("get-pixels");
+    // prcessImage();
+    // let files = FSTool.GetFilesFromDirectorySync(resource);
 
-    getPixels(path.join(resource, files[0]), function (err, pixels) {
-        if (err) {
-            console.log("Bad image path");
-            return;
+    // const classifier = new cv.CascadeClassifier(cv.HAAR_FRONTALFACE_ALT2);
+    // let mat = cv.imread(path.join(resource, files[0]));
+    // let grayImg = mat.bgrToGray();
+    // let res = classifier.detectMultiScale(grayImg);
+    // console.log(res);
+
+    const sourcePath = path.resolve(resource, 'imgs');
+    const facePath = path.resolve(resource, 'face_imgs');
+    
+    let files = fs.readdirSync(sourcePath);
+    files.forEach(file => {
+        let filePath = path.resolve(sourcePath, file);
+        let img = cv.imread(filePath);
+        img = img.bgrToGray();
+        let faces = getFaceImage(img);
+        if (faces.length == 0)
+        return;
+        for (let k in faces)
+        {
+            let face = faces[k].resize(128, 128);
+            console.log(`save face ${file}`);
+            cv.imwrite(path.resolve(facePath, `F${k}` + file), face);
         }
-        console.log("got pixels", pixels.shape.slice());
+    });
+
+    return;
+
+    /*
+    const images = imgFiles
+        // get absolute file path
+        .map(file => path.resolve(imgsPath, file))
+        // read image
+        .map(filePath => cv.imread(filePath))
+        // face recognizer works with gray scale images
+        .map(img => img.bgrToGray())
+        // detect and extract face
+        .map(getFaceImage)
+        // face images must be equally sized
+        .map(faceImg => faceImg.resize(80, 80));
+
+    const isImageFour = (_, i) => imgFiles[i].includes('4');
+    const isNotImageFour = (_, i) => !isImageFour(_, i);
+    // use images 1 - 3 for training
+    const trainImages = images.filter(isNotImageFour);
+    // use images 4 for testing
+    const testImages = images.filter(isImageFour);
+    // make labels
+    const labels = imgFiles
+        .filter(isNotImageFour)
+        .map(file => nameMappings.findIndex(name => file.includes(name)));
+    
+    */
+
+}
+
+function getFaceImage(grayImg:cv.Mat): cv.Mat[] {
+    const faceRects = classifier.detectMultiScale(grayImg).objects;
+    if (!faceRects.length) {
+        return [];
+    }
+    let faces: cv.Mat[] = [];
+    for (let k in faceRects)
+    {
+        faces.push(grayImg.getRegion(faceRects[k]));
+    }
+    return faces;
+}
+
+function training(): void
+{
+    const eigen = new cv.EigenFaceRecognizer();
+    
+    const trainingPath = path.resolve(resource, 'face_input');
+    const testPath = path.resolve(resource, 'face_test');
+
+    let trainingFiles = fs.readdirSync(trainingPath);
+    let trainingMats: cv.Mat[] = [];
+    let trainingIndexs: number[] = [];
+    trainingFiles.forEach(file => {
+        let filePath = path.resolve(trainingPath, file);
+        let img = cv.imread(filePath);
+        trainingMats.push(img);
+        trainingIndexs.push(transFileNameToIndex(file));
+    });
+    console.log("Training...", trainingMats, trainingIndexs);
+    eigen.train(trainingMats, trainingIndexs);
+
+    console.log("Testing...");
+    let testFiles = fs.readdirSync(testPath);
+    testFiles.forEach(file => {
+        let filePath = path.resolve(testPath, file);
+        console.log(filePath);
+        let img = cv.imread(filePath);
+        let result = eigen.predict(img);
+        console.log(file, result);
     });
 
 
-    let zeros = require("zeros");
-    let savePixels = require("save-pixels");
-    //Create an image
-    let x = zeros([32, 32]);
-    x.set(16, 16, 255)
     
-    //Save to a file
-    // let buffer = savePixels(x, "png");
-    // fs.writeFileSync("test.png", buffer.data);
-
-    // var buffer = fs.createWriteStream('output.txt');
-    // var Base64Encode = require('base64-stream').Base64Encode;
-    // let enc = new Base64Encode();
-
-
-    // savePixels(x, 'png').on('end', function() {
-    //     //Writes a DataURL to  output.txt
-    //     buffer.write("data:image/png;base64,"+enc.read().toString());
-    //     fs.writeFileSync("test.png", buffer.data, {});
-    // }).pipe(enc);
-
-
-    // open a file called "lenna.png"
-
-    // var Jimp = require('jimp');
-    // Jimp.read(path.join(resource, files[0]), (err, lenna) => {
-    //     if (err)
-    //         return err.toString();
-
-    //     lenna.resize(256, 256) // resize
-
-    //     lenna.quality(60) // set JPEG quality
-    //     lenna.greyscale() // set greyscale
-    //     let pixel = lenna.getPixelColour(100, 100);
-    //     console.log(pixel);
-
-    //     lenna.write('lena-small-bw.jpg'); // save
-
-    // });
-
-
 }
+
+function transFileNameToIndex(fileName: string): number
+{
+    let word = fileName.substr(0, 1);
+    switch (word)
+    {
+        case "A":
+            return 101;
+        case "B":
+            return 102;
+        case "C":
+            return 103;
+        default:
+            return -1;
+    }
+}
+
 
 async function prcessImage(): Promise<void>
 {
@@ -116,4 +183,5 @@ async function changePixel(dataImage: Jimp): Promise<Jimp>
 
 }
 
-run();
+// run();
+training();
