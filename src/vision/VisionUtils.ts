@@ -1,4 +1,4 @@
-export module vision {
+export module Utils {
 
     export interface View3d {
         data: Buffer;
