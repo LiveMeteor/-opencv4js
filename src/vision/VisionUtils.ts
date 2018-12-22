@@ -9,6 +9,7 @@ export module Utils {
         stride: number[];
     }
 
+    /** 读取图片像素内容 */
     export function GetPixels(path: string, func: (buffer: View3d) => void, thisObj?: any): void
     {
         let getPixels = require("get-pixels");

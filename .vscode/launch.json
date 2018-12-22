@@ -9,6 +9,9 @@
             "request": "launch",
             "name": "启动程序",
             "program": "${workspaceFolder}/bin/main.js",
+            "args": [
+                "detect"
+            ],
             // "preLaunchTask": "tsc: build - tsconfig.json",
             "outFiles": [
                 "${workspaceFolder}/bin/**/*.js"
