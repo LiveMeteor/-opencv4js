@@ -12,8 +12,8 @@ https://www.youtube.com/watch?v=0hZoN4m7hP8
 ·npm install --global windows-build-tools
 ·npm install --save opencv4nodejs
 
-脸部检测
+脸部检测（需添加 resource/faces 目录）
 node .\bin\main.js detect
 
-脸部训练和对比（test目录需要添加对比图片）
+脸部训练和对比（需添加 resource/test 目录和对比图片）
 node .\bin\main.js test
